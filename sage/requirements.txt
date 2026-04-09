@@ -1,7 +1,0 @@
-transformers
-datasets
-pyserini
-uvicorn
-fastapi
-google-genai
-flash-attn==2.7.3
