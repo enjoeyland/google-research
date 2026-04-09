@@ -20,5 +20,5 @@ set -x
 virtualenv -p python3 .
 source ./bin/activate
 
-pip install -r logit_adjustment/requirements.txt
-python -m logit_adjustment.main --dataset=test --mode=baseline --train_batch_size=2 --test_batch_size=2
+pip install -r requirements.txt
+python -m main --dataset=test --mode=baseline --train_batch_size=2 --test_batch_size=2

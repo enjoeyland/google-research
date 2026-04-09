@@ -18,29 +18,30 @@
 Paper: https://arxiv.org/abs/2007.07314
 
 Example usage:
-    $ python -m logit_adjustment.main --dataset=cifar10-lt
+    $ python -m  main --dataset=cifar10-lt
 """
 
 import os
 
 from absl import app
 from absl import flags
-from logit_adjustment import models
-from logit_adjustment import utils
 import numpy as np
 import tensorflow as tf
+
+import models
+import utils
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('dataset', 'cifar10-lt', 'Dataset to use.')
-flags.DEFINE_string('data_home', 'logit_adjustment/data',
+flags.DEFINE_string('data_home', 'data',
                     'Directory where data files are stored.')
 flags.DEFINE_integer('train_batch_size', 128, 'Train batch size.')
 flags.DEFINE_integer('test_batch_size', 100, 'Test batch size.')
 flags.DEFINE_enum('mode', 'posthoc', ['baseline', 'posthoc', 'loss'],
                   'Logit-adjustment mode. See paper for details.')
 flags.DEFINE_float('tau', 1.0, 'Tau parameter for logit adjustment.')
-flags.DEFINE_string('tb_log_dir', 'logit_adjustment/log',
+flags.DEFINE_string('tb_log_dir', 'log',
                     'Path to write Tensorboard summaries.')
 
 
@@ -122,7 +123,7 @@ def main(_):
 
     # Display train metrics at the end of each epoch.
     train_acc = train_acc_metric.result()
-    train_acc_metric.reset_states()
+    train_acc_metric.reset_state()
     print(f'Training accuracy over epoch: {train_acc:.4f}')
     with train_summary_writer.as_default():
       tf.summary.scalar(
@@ -141,7 +142,7 @@ def main(_):
 
     # Display test metrics.
     test_acc = test_acc_metric.result()
-    test_acc_metric.reset_states()
+    test_acc_metric.reset_state()
     print(f'Test accuracy: {test_acc:.4f}')
     with test_summary_writer.as_default():
       tf.summary.scalar(
@@ -149,7 +150,7 @@ def main(_):
 
     if posthoc_adjusting:
       test_adj_acc = test_adj_acc_metric.result()
-      test_adj_acc_metric.reset_states()
+      test_adj_acc_metric.reset_state()
       print(f'Logit-adjusted test accuracy: {test_adj_acc:.4f}')
 
       with test_summary_writer.as_default():
