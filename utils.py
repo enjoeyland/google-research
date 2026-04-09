@@ -21,6 +21,7 @@ import dataclasses
 import tensorflow as tf
 
 
+##### Main Logit Adjustment Loss Function #####
 def build_loss_fn(use_la_loss, base_probs, tau=1.0):
   """Builds the loss function to be used for training.
 

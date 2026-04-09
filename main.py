@@ -134,6 +134,7 @@ def main(_):
       logits = model(x, training=False)
       test_acc_metric.update_state(y, logits)
 
+      ###### Posthoc Logit Adjustment ######
       if posthoc_adjusting:
         # Posthoc logit-adjustment.
         adjusted_logits = logits - tf.math.log(
