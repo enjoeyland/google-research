@@ -43,7 +43,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
       help='Use Nesterov momentum.',
   )
   p.add_argument('--seed', type=int, default=0, help='Base RNG seed.')
-  p.add_argument('--output_dir', type=str, default='synthetic_fig2', help='Where to save figures.')
+  p.add_argument('--output_dir', type=str, default='dist/synthetic_fig2', help='Where to save figures.')
   p.add_argument('--plot', action='store_true', help='If set, save matplotlib figures.')
   p.add_argument('--tau_max', type=float, default=2.0, help='Max τ for post-hoc curves (Fig. 2 right).')
   p.add_argument('--tau_steps', type=int, default=41, help='Number of τ values in [0, tau_max].')
