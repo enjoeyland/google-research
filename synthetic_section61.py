@@ -47,11 +47,25 @@ def _build_arg_parser() -> argparse.ArgumentParser:
   p.add_argument('--plot', action='store_true', help='If set, save matplotlib figures.')
   p.add_argument('--tau_max', type=float, default=2.0, help='Max τ for post-hoc curves (Fig. 2 right).')
   p.add_argument('--tau_steps', type=int, default=41, help='Number of τ values in [0, tau_max].')
+  p.add_argument(
+      '--model',
+      type=str,
+      default='linear',
+      choices=['linear', 'mlp'],
+      help='Classifier type. "linear" matches the paper; "mlp" adds nonlinearity.',
+  )
+  p.add_argument('--hidden_dim', type=int, default=64, help='MLP hidden width (when --model=mlp).')
+  p.add_argument('--hidden_layers', type=int, default=2, help='Number of hidden layers (when --model=mlp).')
   return p
 
 
 def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
   return _build_arg_parser().parse_args(argv)
+
+
+def _fig_suffix() -> str:
+  assert FLAGS is not None
+  return '_mlp' if getattr(FLAGS, 'model', 'linear') == 'mlp' else ''
 
 
 # Class index 0 = paper's y = +1 (rare), index 1 = y = -1 (frequent).
@@ -129,15 +143,19 @@ def train_affine_one_trial(
     momentum: float,
     nesterov: bool,
 ) -> tf.keras.Model:
-  """Train 2-class linear softmax margin model."""
+  """Train 2-class model (linear or MLP) with softmax margin loss."""
   d01_f, d10_f = margin_deltas(loss_kind, pi_positive)
   d01 = tf.constant(d01_f, dtype=tf.float32)
   d10 = tf.constant(d10_f, dtype=tf.float32)
 
-  model = tf.keras.Sequential([
-      tf.keras.layers.Input(shape=(2,)),
-      tf.keras.layers.Dense(2, use_bias=True),
-  ])
+  layers = [tf.keras.layers.Input(shape=(2,))]
+  if getattr(FLAGS, 'model', 'linear') == 'mlp':
+    h = int(getattr(FLAGS, 'hidden_dim', 64))
+    L = int(getattr(FLAGS, 'hidden_layers', 2))
+    for _ in range(max(L, 1)):
+      layers.append(tf.keras.layers.Dense(h, activation='relu', use_bias=True))
+  layers.append(tf.keras.layers.Dense(2, use_bias=True))
+  model = tf.keras.Sequential(layers)
   opt = tf.keras.optimizers.SGD(
       learning_rate=learning_rate,
       momentum=momentum,
@@ -273,7 +291,8 @@ def plot_fig2_left_balanced_error(errors: np.ndarray, bayes_mean: float, plt) ->
   ax.legend(loc='upper right')
   fig.tight_layout()
 
-  out_path = os.path.join(FLAGS.output_dir, 'fig2_left_balanced_error.png')
+  out_path = os.path.join(
+      FLAGS.output_dir, f'fig2_left_balanced_error{_fig_suffix()}.png')
   fig.savefig(out_path, dpi=150)
   plt.close(fig)
   return out_path
@@ -360,7 +379,8 @@ def plot_fig2_middle_separators(plt) -> str:
   ax.set_title('Learned linear separators (one trial)')
   fig.tight_layout()
 
-  out_path = os.path.join(FLAGS.output_dir, 'fig2_middle_separators.png')
+  out_path = os.path.join(
+      FLAGS.output_dir, f'fig2_middle_separators{_fig_suffix()}.png')
   fig.savefig(out_path, dpi=150)
   plt.close(fig)
   return out_path
@@ -383,7 +403,8 @@ def plot_fig2_right_posthoc(
   ax.legend()
   fig.tight_layout()
 
-  out_path = os.path.join(FLAGS.output_dir, 'fig2_right_posthoc.png')
+  out_path = os.path.join(
+      FLAGS.output_dir, f'fig2_right_posthoc{_fig_suffix()}.png')
   fig.savefig(out_path, dpi=150)
   plt.close(fig)
   return out_path
