@@ -68,6 +68,14 @@ def _fig_suffix() -> str:
   return '_mlp' if getattr(FLAGS, 'model', 'linear') == 'mlp' else ''
 
 
+def _filename_pi_tag() -> str:
+  """Filename fragment encoding π_+ (e.g. 0.05 -> _pi0p05)."""
+  assert FLAGS is not None
+  p = float(FLAGS.pi_positive)
+  text = f'{p:g}'.replace('-', 'm').replace('.', 'p')
+  return f'_pi{text}'
+
+
 # Class index 0 = paper's y = +1 (rare), index 1 = y = -1 (frequent).
 MU = np.array([[1.0, 1.0], [-1.0, -1.0]], dtype=np.float32)
 
@@ -292,7 +300,8 @@ def plot_fig2_left_balanced_error(errors: np.ndarray, bayes_mean: float, plt) ->
   fig.tight_layout()
 
   out_path = os.path.join(
-      FLAGS.output_dir, f'fig2_left_balanced_error{_fig_suffix()}.png')
+      FLAGS.output_dir,
+      f'fig2_left_balanced_error{_filename_pi_tag()}{_fig_suffix()}.png')
   fig.savefig(out_path, dpi=150)
   plt.close(fig)
   return out_path
@@ -380,7 +389,66 @@ def plot_fig2_middle_separators(plt) -> str:
   fig.tight_layout()
 
   out_path = os.path.join(
-      FLAGS.output_dir, f'fig2_middle_separators{_fig_suffix()}.png')
+      FLAGS.output_dir,
+      f'fig2_middle_separators{_filename_pi_tag()}{_fig_suffix()}.png')
+  fig.savefig(out_path, dpi=150)
+  plt.close(fig)
+  return out_path
+
+
+def plot_bayes_ce_separators(plt) -> str:
+  """One-trial scatter + Bayes boundary and ERM-trained linear separator (labeled as standard CE)."""
+  rng = np.random.default_rng(FLAGS.seed + 999)
+  x_tr, y_tr = sample_gaussian_mixture(
+      FLAGS.num_train, FLAGS.pi_positive, FLAGS.sigma, rng)
+  x_te, y_te = sample_gaussian_mixture(
+      2000, FLAGS.pi_positive, FLAGS.sigma, rng)
+
+  model_ce = train_affine_one_trial(
+      x_tr,
+      y_tr,
+      0,
+      FLAGS.pi_positive,
+      FLAGS.epochs,
+      FLAGS.batch_size,
+      FLAGS.learning_rate,
+      FLAGS.momentum,
+      FLAGS.nesterov,
+  )
+  w_ce, b_ce = model_ce.layers[-1].get_weights()
+
+  fig, ax = plt.subplots(figsize=(5, 5))
+  c0 = y_te == 0
+  c1 = y_te == 1
+  ax.scatter(x_te[c0, 0], x_te[c0, 1], s=6, alpha=0.35, c='C0', label='y=+1 (rare)')
+  ax.scatter(x_te[c1, 0], x_te[c1, 1], s=6, alpha=0.35, c='C1', label='y=-1')
+  xs = np.linspace(-4.0, 4.0, 200)
+
+  ax.plot(xs, -xs, 'k--', lw=2, label='Bayes (x1+x2=0)')
+
+  a, b, c = _boundary_normal(w_ce, b_ce)
+  yl = _line_from_normal(a, b, c, xs)
+  if yl is not None:
+    ax.plot(
+        xs,
+        yl,
+        '-',
+        lw=1.5,
+        label='Standard Cross Entropy (CE) separator',
+    )
+
+  ax.set_xlim(-4, 4)
+  ax.set_ylim(-4, 4)
+  ax.set_aspect('equal')
+  ax.set_xlabel(r'$x_1$')
+  ax.set_ylabel(r'$x_2$')
+  ax.legend(loc='upper left', fontsize=8)
+  ax.set_title('Bayes vs standard CE (one trial)')
+  fig.tight_layout()
+
+  out_path = os.path.join(
+      FLAGS.output_dir,
+      f'fig2_middle_bayes_ce_separators{_filename_pi_tag()}{_fig_suffix()}.png')
   fig.savefig(out_path, dpi=150)
   plt.close(fig)
   return out_path
@@ -404,7 +472,8 @@ def plot_fig2_right_posthoc(
   fig.tight_layout()
 
   out_path = os.path.join(
-      FLAGS.output_dir, f'fig2_right_posthoc{_fig_suffix()}.png')
+      FLAGS.output_dir,
+      f'fig2_right_posthoc{_filename_pi_tag()}{_fig_suffix()}.png')
   fig.savefig(out_path, dpi=150)
   plt.close(fig)
   return out_path
@@ -430,6 +499,8 @@ def maybe_plot(
   print(f'Wrote {p1}')
   p2 = plot_fig2_middle_separators(plt)
   print(f'Wrote {p2}')
+  p2b = plot_bayes_ce_separators(plt)
+  print(f'Wrote {p2b}')
   p3 = plot_fig2_right_posthoc(taus, err_la, err_wn, bayes_test, plt)
   print(f'Wrote {p3}')
 
